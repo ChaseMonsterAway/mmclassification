@@ -207,7 +207,7 @@ class HierarchicalDataset(BaseDataset):
             metrics = [metric]
         else:
             metrics = metric
-        allowed_metrics = ['mAP', 'CP', 'CR', 'CF1', 'OP', 'OR', 'OF1']
+        allowed_metrics = ['mAP', 'CP', 'CR', 'CF1', 'C_wise_F1', 'OP', 'OR', 'OF1']
         eval_results = {}
         # results = np.vstack(results)
         # gt_labels = self.get_gt_labels()
@@ -223,7 +223,8 @@ class HierarchicalDataset(BaseDataset):
             mAP_value = mAP(results, gt_labels)
             eval_results['mAP'] = mAP_value
         if len(set(metrics) - {'mAP'}) != 0:
-            performance_keys = ['CP', 'CR', 'CF1', 'OP', 'OR', 'OF1']
+            performance_keys = ['CP', 'CR', 'CF1', 'C_wise_F1', 'OP', 'OR', 'OF1']
+            metric_options['class_wise'] = True
             performance_values = average_performance(results, gt_labels,
                                                      **metric_options)
             for k, v in zip(performance_keys, performance_values):
