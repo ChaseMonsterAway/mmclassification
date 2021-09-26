@@ -5,9 +5,12 @@ _base_ = [
     '../_base_/default_runtime.py'
 ]
 
+file_type=[dict(type='ce', max_len=3), dict(type='bce', max_len=2)]
 
 model = dict(
     head=dict(
+        type='HiearachicalLinearClsHead',
+        file_type=file_type,
         num_classes=5,
         loss=dict(type='HierarchicalCrossEntropyLoss', loss_weight=1.0, split=(3, 5), use_sigmoid=(False, True), use_soft=(False, False),),
     )
@@ -44,19 +47,19 @@ data = dict(
         type=dataset_type,
         data_prefix=data_root + 'train',
         ann_file=[data_root + 'train/txts/multi-label/train_ml_all.txt', data_root + 'train/txts/multi-label/train_attr_all.txt'],
-        file_type=[dict(type='ce', max_len=3), dict(type='bce', max_len=2)],
+        file_type=file_type,
         pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
         ann_file=[data_root + 'train/txts/multi-label/train_ml_all.txt', data_root + 'train/txts/multi-label/train_attr_all.txt'],
-        file_type=[dict(type='ce', max_len=3), dict(type='bce', max_len=2)],
+        file_type=file_type,
         data_prefix=data_root + 'train',
         pipeline=test_pipeline),
     test=dict(
         # replace `data/val` with `data/test` for standard test
         type=dataset_type,
         ann_file=[data_root + 'train/txts/multi-label/train_ml_all.txt', data_root + 'train/txts/multi-label/train_attr_all.txt'],
-        file_type=[dict(type='ce', max_len=3), dict(type='bce', max_len=2)],
+        file_type=file_type,
         data_prefix=data_root + 'train',
         pipeline=test_pipeline))
 evaluation = dict(interval=1, metric='accuracy')
