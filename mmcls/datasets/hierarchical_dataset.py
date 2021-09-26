@@ -260,7 +260,7 @@ class HierarchicalDataset(BaseDataset):
                 eval_results = self.evaluate_bce(
                     results[..., res_start_idx: res_end_idx],
                     gt_labels[..., label_start_idx: label_end_idx],
-                    metric=['mAP', 'CP', 'CR', 'CF1', 'OP', 'OR', 'OF1'],
+                    metric=['mAP', 'CP', 'CR', 'CF1', 'C_wise_F1', 'OP', 'OR', 'OF1'],
                     metric_options=None,
                 )
             else:
