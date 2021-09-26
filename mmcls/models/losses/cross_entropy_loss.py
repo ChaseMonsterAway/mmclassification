@@ -177,7 +177,7 @@ class CrossEntropyLoss(nn.Module):
             class_weight = cls_score.new_tensor(self.class_weight)
         else:
             class_weight = None
-
+        
         loss_cls = self.loss_weight * self.cls_criterion(
             cls_score,
             label,
@@ -186,4 +186,5 @@ class CrossEntropyLoss(nn.Module):
             reduction=reduction,
             avg_factor=avg_factor,
             **kwargs)
+
         return loss_cls

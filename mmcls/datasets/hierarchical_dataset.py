@@ -256,7 +256,7 @@ class HierarchicalDataset(BaseDataset):
                     metric_options=None,
                 )
             elif file_type['type'] == 'bce':
-                eval_results = self.evaluate_ce(
+                eval_results = self.evaluate_bce(
                     results[..., res_start_idx: res_end_idx],
                     gt_labels[..., label_start_idx: label_end_idx],
                     metric=['mAP', 'CP', 'CR', 'CF1', 'OP', 'OR', 'OF1'],
