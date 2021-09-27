@@ -186,7 +186,8 @@ def main():
                                             args.metric_options)
             results.update(eval_results)
             for k, v in eval_results.items():
-                print(f'\n{k} : {v:.2f}')
+                v = np.around(v, 2)
+                print(f'\n{k} : {v}')
         if args.out:
             if 'none' not in args.out_items:
                 scores = np.vstack(outputs)

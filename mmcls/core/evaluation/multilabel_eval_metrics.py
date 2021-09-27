@@ -59,7 +59,9 @@ def average_performance(pred, target, thr=None, k=None, class_wise=False):
     tp = (pos_inds * target) == 1
     fp = (pos_inds * (1 - target)) == 1
     fn = ((1 - pos_inds) * target) == 1
-
+    tn = np.logical_and(1 - pos_inds, target == 0)
+    acc_class = (tp.sum(axis=0) + tn.sum(axis=0)) / (tp.sum(axis=0) + \
+                tn.sum(axis=0) + fn.sum(axis=0) + fp.sum(axis=0))
     precision_class = tp.sum(axis=0) / np.maximum(
         tp.sum(axis=0) + fp.sum(axis=0), eps)
     recall_class = tp.sum(axis=0) / np.maximum(
@@ -73,5 +75,5 @@ def average_performance(pred, target, thr=None, k=None, class_wise=False):
     if class_wise:
         C_wise_F1 = 100 * 2 * precision_class * recall_class / \
                     np.maximum(precision_class + recall_class, eps)
-        return CP, CR, CF1, C_wise_F1, OP, OR, OF1
+        return CP, CR, CF1, C_wise_F1, acc_class, OP, OR, OF1
     return CP, CR, CF1, OP, OR, OF1

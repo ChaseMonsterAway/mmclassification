@@ -58,9 +58,10 @@ class HierarchicalDataset(BaseDataset):
                         label = line[-1]
                     elif file_type['type'] == 'bce':
                         max_len = file_type['max_len']
-                        pos_inds = list(map(int, line[1:]))
                         label = np.zeros(max_len)
-                        label[pos_inds] = 1
+                        if len(line) != 1:
+                            pos_inds = list(map(int, line[1:]))
+                            label[pos_inds] = 1
                         label = label.tolist()
                     else:
                         raise ValueError(f"Only support 'ce' and 'bce' file_type")
@@ -207,7 +208,7 @@ class HierarchicalDataset(BaseDataset):
             metrics = [metric]
         else:
             metrics = metric
-        allowed_metrics = ['mAP', 'CP', 'CR', 'CF1', 'C_wise_F1', 'OP', 'OR', 'OF1']
+        allowed_metrics = ['mAP', 'CP', 'CR', 'CF1', 'C_wise_F1', 'C_wise_acc', 'OP', 'OR', 'OF1']
         eval_results = {}
         # results = np.vstack(results)
         # gt_labels = self.get_gt_labels()
@@ -223,7 +224,7 @@ class HierarchicalDataset(BaseDataset):
             mAP_value = mAP(results, gt_labels)
             eval_results['mAP'] = mAP_value
         if len(set(metrics) - {'mAP'}) != 0:
-            performance_keys = ['CP', 'CR', 'CF1', 'C_wise_F1', 'OP', 'OR', 'OF1']
+            performance_keys = ['CP', 'CR', 'CF1', 'C_wise_F1', 'C_wise_acc', 'OP', 'OR', 'OF1']
             metric_options['class_wise'] = True
             performance_values = average_performance(results, gt_labels,
                                                      **metric_options)
@@ -260,7 +261,7 @@ class HierarchicalDataset(BaseDataset):
                 eval_results = self.evaluate_bce(
                     results[..., res_start_idx: res_end_idx],
                     gt_labels[..., label_start_idx: label_end_idx],
-                    metric=['mAP', 'CP', 'CR', 'CF1', 'C_wise_F1', 'OP', 'OR', 'OF1'],
+                    metric=['mAP', 'CP', 'CR', 'CF1', 'C_wise_F1', 'C_wise_acc', 'OP', 'OR', 'OF1'],
                     metric_options=None,
                 )
             else:
