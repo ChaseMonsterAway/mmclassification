@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import pdb
+from functools import partial
 
 import torch
 import torch.nn as nn
@@ -7,6 +8,7 @@ import torch.nn.functional as F
 
 from ..builder import LOSSES
 from .utils import weight_reduce_loss
+from .focal_loss import sigmoid_focal_loss
 
 
 def cross_entropy(pred,
@@ -140,6 +142,9 @@ class HierarchicalCrossEntropyLoss(nn.Module):
                  use_soft=(False,),
                  reduction='mean',
                  loss_weight=1.0,
+                 use_focal=False,
+                 gamma=2.0,
+                 alpha=0.5,
                  class_weight=None):
         super(HierarchicalCrossEntropyLoss, self).__init__()
         self.use_sigmoid = use_sigmoid
@@ -161,7 +166,13 @@ class HierarchicalCrossEntropyLoss(nn.Module):
             start = 0 if idx == 0 else self.split[idx - 1]
             end = self.split[idx]
             if self.use_sigmoid[idx]:
-                self.cls_criterion.append(binary_cross_entropy)
+                if use_focal:
+                    partial_focal = partial(
+                        sigmoid_focal_loss, gamma=gamma, alpha=alpha
+                    )
+                    self.cls_criterion.append(partial_focal)
+                else:
+                    self.cls_criterion.append(binary_cross_entropy)
                 self.label_split.append(self.label_split[-1] + end - start)
             elif self.use_soft[idx]:
                 self.cls_criterion.append(soft_cross_entropy)
