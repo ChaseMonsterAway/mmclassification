@@ -422,6 +422,7 @@ class Rotate(object):
                  pad_val=128,
                  prob=0.5,
                  random_negative_prob=0.5,
+                 auto_bound=False,
                  interpolation='nearest'):
         assert isinstance(angle, float), 'The angle type must be float, but ' \
             f'got {type(angle)} instead.'
@@ -442,6 +443,7 @@ class Rotate(object):
                 'tuple must got elements of int type.'
         else:
             raise TypeError('pad_val must be int or tuple with 3 elements.')
+        self.auto_bound = auto_bound
         assert 0 <= prob <= 1.0, 'The prob should be in range [0,1], ' \
             f'got {prob} instead.'
         assert 0 <= random_negative_prob <= 1.0, 'The random_negative_prob ' \
@@ -458,7 +460,8 @@ class Rotate(object):
     def __call__(self, results):
         if np.random.rand() > self.prob:
             return results
-        angle = random_negative(self.angle, self.random_negative_prob)
+        angle = random.uniform(0, abs(self.angle))
+        angle = random_negative(angle, self.random_negative_prob)
         for key in results.get('img_fields', ['img']):
             img = results[key]
             img_rotated = mmcv.imrotate(
@@ -467,6 +470,7 @@ class Rotate(object):
                 center=self.center,
                 scale=self.scale,
                 border_value=self.pad_val,
+                auto_bound=self.auto_bound,
                 interpolation=self.interpolation)
             results[key] = img_rotated.astype(img.dtype)
         return results

@@ -156,7 +156,9 @@ def pytorch2onnx(model,
         assert (len(net_feed_input) == 1)
         sess = rt.InferenceSession(output_file)
         onnx_result = sess.run(
-            None, {net_feed_input[0]: img_list[0].detach().numpy()})[0]
+            None, {net_feed_input[0]: img_list[0].detach().numpy()})[0][0]
+        import pdb
+        pdb.set_trace()
         if not np.allclose(pytorch_result, onnx_result):
             raise ValueError(
                 'The outputs are different between Pytorch and ONNX')

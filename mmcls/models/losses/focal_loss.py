@@ -12,7 +12,8 @@ def sigmoid_focal_loss(pred,
                        gamma=2.0,
                        alpha=0.25,
                        reduction='mean',
-                       avg_factor=None):
+                       avg_factor=None,
+                       **kwargs):
     r"""Sigmoid focal loss.
 
     Args:

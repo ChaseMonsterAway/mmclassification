@@ -1063,3 +1063,19 @@ class Albu(object):
     def __repr__(self):
         repr_str = self.__class__.__name__ + f'(transforms={self.transforms})'
         return repr_str
+
+
+@PIPELINES.register_module()
+class Filter(object):
+    def __init__(self, min_size):
+        self.min_size = min_size
+
+    def __call__(self, results):
+        shape = results['ori_shape']
+        if min(shape[:2]) < self.min_size:
+            return None
+        return results
+
+    def __repr__(self):
+        repr_str = self.__class__.__name__ + f'(min_size={self.min_size})'
+

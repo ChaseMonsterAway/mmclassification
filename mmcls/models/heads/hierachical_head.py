@@ -1,4 +1,5 @@
 # Copyright Jun Sun.
+import pdb
 from functools import partial
 
 import numpy as np
@@ -42,6 +43,7 @@ class HiearachicalLinearClsHead(ClsHead):
         self.fc = nn.Linear(self.in_channels, self.num_classes)
 
     def _act(self, cls_score):
+        return cls_score
         new_cls_score = []
         """[dict(type='ce', max_len=3), dict(type='bce', max_len=2)]"""
         split_len = [ftype['max_len'] for ftype in self.file_type]
@@ -52,8 +54,16 @@ class HiearachicalLinearClsHead(ClsHead):
         for idx, start in enumerate(split_len[:-1]):
             end = split_len[idx + 1]
             act_func = partial(F.softmax, dim=-1) \
-                if act_type[idx] == 'softmax' else F.sigmoid
-            new_cls_score.append(act_func(cls_score[..., start:end]))
+                if act_type[idx] == 'softmax' else torch.sigmoid
+            # cls_score[..., start:end] = act_func(cls_score[..., start:end])
+            if act_type[idx] != 'softmax':
+                for i in range(start, end):
+                    new_cls_score.append(act_func(cls_score[..., i:i+1]))
+            else:
+                new_cls_score.append(act_func(cls_score[..., start:end]))
+                
+        # return cls_score
+        # pdb.set_trace()
         return torch.cat(new_cls_score, dim=1)
 
     def simple_test(self, x):

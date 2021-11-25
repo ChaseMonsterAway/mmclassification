@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import copy
+import random
 from abc import ABCMeta, abstractmethod
 
 import mmcv
@@ -79,13 +80,18 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
     def prepare_data(self, idx):
         results = copy.deepcopy(self.data_infos[idx])
-        return self.pipeline(results)
+        results = self.pipeline(results)
+  
+        return results
 
     def __len__(self):
         return len(self.data_infos)
 
     def __getitem__(self, idx):
-        return self.prepare_data(idx)
+        results = self.prepare_data(idx)
+        if results is None:
+            return self.__getitem__(random.randint(0, len(self) - 1))
+        return results
 
     @classmethod
     def get_classes(cls, classes=None):

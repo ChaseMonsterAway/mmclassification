@@ -39,7 +39,7 @@ class InvertedResidual(BaseModule):
                  expand_ratio,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN'),
-                 act_cfg=dict(type='ReLU6'),
+                 act_cfg=dict(type='ReLU'),
                  with_cp=False,
                  init_cfg=None):
         super(InvertedResidual, self).__init__(init_cfg)
@@ -131,9 +131,10 @@ class MobileNetV2(BaseBackbone):
                  widen_factor=1.,
                  out_indices=(7, ),
                  frozen_stages=-1,
+                 deep_stem=False,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN'),
-                 act_cfg=dict(type='ReLU6'),
+                 act_cfg=dict(type='ReLU'),
                  norm_eval=False,
                  with_cp=False,
                  init_cfg=[
@@ -163,9 +164,14 @@ class MobileNetV2(BaseBackbone):
         self.with_cp = with_cp
 
         self.in_channels = make_divisible(32 * widen_factor, 8)
-
+        if deep_stem:
+            self.conv0 = ConvModule(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1, conv_cfg=self.conv_cfg, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
+            in_channels_ = 16
+        else:
+            in_channels_ = 3
+            self.conv0 = nn.Sequential()
         self.conv1 = ConvModule(
-            in_channels=3,
+            in_channels=in_channels_,
             out_channels=self.in_channels,
             kernel_size=3,
             stride=2,
@@ -234,6 +240,7 @@ class MobileNetV2(BaseBackbone):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        x = self.conv0(x)
         x = self.conv1(x)
 
         outs = []

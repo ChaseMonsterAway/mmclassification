@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import pdb
 import warnings
 
 import numpy as np
@@ -66,6 +67,8 @@ def average_performance(pred, target, thr=None, k=None, class_wise=False):
         tp.sum(axis=0) + fp.sum(axis=0), eps)
     recall_class = tp.sum(axis=0) / np.maximum(
         tp.sum(axis=0) + fn.sum(axis=0), eps)
+    tpr = tp.sum(axis=0) / np.maximum(tp.sum(axis=0) + fn.sum(axis=0), eps) * 100
+    fpr = fp.sum(axis=0) / np.maximum(fp.sum(axis=0) + tn.sum(axis=0), eps) * 100
     CP = precision_class.mean() * 100.0
     CR = recall_class.mean() * 100.0
     CF1 = 2 * CP * CR / np.maximum(CP + CR, eps)
@@ -75,5 +78,7 @@ def average_performance(pred, target, thr=None, k=None, class_wise=False):
     if class_wise:
         C_wise_F1 = 100 * 2 * precision_class * recall_class / \
                     np.maximum(precision_class + recall_class, eps)
-        return CP, CR, CF1, C_wise_F1, acc_class, OP, OR, OF1
+        C_wise_F1 = np.concatenate([np.round(C_wise_F1, 2), np.round(tpr, 2), np.round(fpr, 2)])
+        return CP, CR, CF1, C_wise_F1, np.round(100 * acc_class, 2), OP, OR, OF1
+
     return CP, CR, CF1, OP, OR, OF1

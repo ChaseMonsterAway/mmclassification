@@ -61,7 +61,9 @@ class HierarchicalDataset(BaseDataset):
                         label = np.zeros(max_len)
                         if len(line) != 1:
                             pos_inds = list(map(int, line[1:]))
-                            label[pos_inds] = 1
+                            pos_inds = [pind for pind in pos_inds if pind < max_len]
+                            if pos_inds:
+                                label[pos_inds] = 1
                         label = label.tolist()
                     else:
                         raise ValueError(f"Only support 'ce' and 'bce' file_type")
