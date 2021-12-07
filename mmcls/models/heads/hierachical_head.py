@@ -43,7 +43,7 @@ class HiearachicalLinearClsHead(ClsHead):
         self.fc = nn.Linear(self.in_channels, self.num_classes)
 
     def _act(self, cls_score):
-        return cls_score
+        # return cls_score
         new_cls_score = []
         """[dict(type='ce', max_len=3), dict(type='bce', max_len=2)]"""
         split_len = [ftype['max_len'] for ftype in self.file_type]

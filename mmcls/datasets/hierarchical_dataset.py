@@ -67,7 +67,7 @@ class HierarchicalDataset(BaseDataset):
                         label = label.tolist()
                     else:
                         raise ValueError(f"Only support 'ce' and 'bce' file_type")
-                    assert filename not in name_labels[idx]
+                    assert filename not in name_labels[idx], f'{filename}, {self.ann_file[idx]}'
                     name_labels[idx][filename] = label
         name_label = self._combine(name_labels)
         return name_label
