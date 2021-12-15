@@ -5,8 +5,17 @@ import warnings
 import numpy as np
 import torch
 
+from sklearn.metrics import roc_curve, auc
 
-def average_performance(pred, target, thr=None, k=None, class_wise=False):
+def tpr_with_fix_fpr(pred, gt, value):
+    fpr, tpr, thr = roc_curve(gt, pred)
+    ind = np.where(fpr<=value)[0][-1]
+    auc_area = auc(fpr, tpr)
+    return fpr[ind], tpr[ind], thr[ind], auc_area
+
+
+def average_performance(pred, target, thr=None, k=None, class_wise=False,
+        value=0.05):
     """Calculate CP, CR, CF1, OP, OR, OF1, where C stands for per-class
     average, O stands for overall average, P stands for precision, R stands for
     recall and F1 stands for F1-score.
@@ -26,6 +35,16 @@ def average_performance(pred, target, thr=None, k=None, class_wise=False):
     Returns:
         tuple: (CP, CR, CF1, OP, OR, OF1)
     """
+    nums=1 if pred.ndim == 1 else pred.shape[-1]
+    each_class_info = list()
+    for num in nums:
+        p = pred[..., num]
+        g = target[..., num]
+        fpr, tpr, thr, auc_area = tpr_with_fix_fpr(p, g, value=value)
+        each_class_info.append(np.array(np.round(fpr, 4), np.round(tpr, 4),
+            np.round(thr, 4), np.round(auc_area, 4), '||'))
+    tpr_at_fpr = np.concatenate(each_class_info, axis=0)
+
     if isinstance(pred, torch.Tensor) and isinstance(target, torch.Tensor):
         pred = pred.detach().cpu().numpy()
         target = target.detach().cpu().numpy()
@@ -78,7 +97,8 @@ def average_performance(pred, target, thr=None, k=None, class_wise=False):
     if class_wise:
         C_wise_F1 = 100 * 2 * precision_class * recall_class / \
                     np.maximum(precision_class + recall_class, eps)
-        C_wise_F1 = np.concatenate([np.round(C_wise_F1, 2), np.round(tpr, 2), np.round(fpr, 2)])
+        C_wise_F1 = np.concatenate([np.round(C_wise_F1, 2), np.round(tpr, 2),
+            np.round(fpr, 2), tpr_at_fpr])
         return CP, CR, CF1, C_wise_F1, np.round(100 * acc_class, 2), OP, OR, OF1
 
     return CP, CR, CF1, OP, OR, OF1
