@@ -103,7 +103,7 @@ def tpr_at_fprs(pred, target, fpr_value=(0.05,), class_names=None):
         info_at_fpr = f'{class_names[nidx]}:\n' if class_names is not None else f'{nidx}:\n'
         for fidx, fprv in enumerate(fpr_value):
             fpr, tpr, thr, auc_area = tpr_with_fix_fpr(p, g, value=fprv)
-            info_at_fpr += f'\t@{fprv} \tfpr: {np.round(fpr, 5)} tpr: {np.round(tpr, 5)} ' \
+            info_at_fpr += f'\t@{fprv} \t\t fpr: {np.round(fpr, 5)} tpr: {np.round(tpr, 5)} ' \
                            f'thr: {np.round(thr, 4)} auc: {np.round(auc_area, 4)}\n'
         info_at_fpr += '\n'
         total_info += info_at_fpr
