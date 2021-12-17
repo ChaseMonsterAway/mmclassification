@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 import numpy as np
 
-from mmcls.core import average_performance, mAP
+from mmcls.core import average_performance, mAP, tpr_at_fprs
 from mmcls.core.evaluation import precision_recall_f1, support
 from mmcls.models.losses import accuracy
 
@@ -17,14 +17,18 @@ class HierarchicalDataset(BaseDataset):
     def __init__(self,
                  file_type=[
                      dict(type='ce', max_len=3),
-                     dict(type='bce', max_len=3),
+                     dict(type='bce', max_len=3, class_name=None, class_wise=True),
                  ],
+                 fpr=(0.0001, 0.001, 0.01),
+                 tpr_at_fpr=True,
                  **kwargs,
                  ):
         assert file_type is not None
         assert isinstance(file_type, (list, tuple))
         assert isinstance(kwargs.get('ann_file', None), (list, tuple))
         assert len(file_type) == len(kwargs.get('ann_file', []))
+        self.fpr = fpr
+        self.tpr_at_fpr = tpr_at_fpr
         self.file_type = file_type
         super(HierarchicalDataset, self).__init__(**kwargs)
 
@@ -178,6 +182,7 @@ class HierarchicalDataset(BaseDataset):
     def evaluate_bce(self,
                      results,
                      gt_labels,
+                     file_type,
                      metric='mAP',
                      metric_options=None,
                      logger=None,
@@ -210,7 +215,10 @@ class HierarchicalDataset(BaseDataset):
             metrics = [metric]
         else:
             metrics = metric
-        allowed_metrics = ['mAP', 'CP', 'CR', 'CF1', 'C_wise_F1', 'C_wise_acc', 'OP', 'OR', 'OF1']
+        if file_type['class_wise']:
+            allowed_metrics = ['mAP', 'CP', 'CR', 'CF1', 'C_wise_F1', 'C_wise_acc', 'OP', 'OR', 'OF1']
+        else:
+            allowed_metrics = ['mAP', 'CP', 'CR', 'CF1', 'OP', 'OR', 'OF1']
         eval_results = {}
         # results = np.vstack(results)
         # gt_labels = self.get_gt_labels()
@@ -226,8 +234,16 @@ class HierarchicalDataset(BaseDataset):
             mAP_value = mAP(results, gt_labels)
             eval_results['mAP'] = mAP_value
         if len(set(metrics) - {'mAP'}) != 0:
-            performance_keys = ['CP', 'CR', 'CF1', 'C_wise_F1', 'C_wise_acc', 'OP', 'OR', 'OF1']
-            metric_options['class_wise'] = True
+            if file_type['class_wise']:
+                performance_keys = ['CP', 'CR', 'CF1', 'C_wise_F1', 'C_wise_acc', 'OP', 'OR', 'OF1']
+            else:
+                performance_keys = ['CP', 'CR', 'CF1', 'OP', 'OR', 'OF1']
+            metric_options['class_wise'] = file_type['class_wise']
+            if self.tpr_at_fpr:
+                info = tpr_at_fprs(results, gt_labels, fpr_value=self.fpr, class_names=file_type['class_name'])
+                import logging
+                logger = logging.getLogger()
+                logger.info(info)
             performance_values = average_performance(results, gt_labels,
                                                      **metric_options)
             for k, v in zip(performance_keys, performance_values):
@@ -263,6 +279,7 @@ class HierarchicalDataset(BaseDataset):
                 eval_results = self.evaluate_bce(
                     results[..., res_start_idx: res_end_idx],
                     gt_labels[..., label_start_idx: label_end_idx],
+                    file_type,
                     metric=['mAP', 'CP', 'CR', 'CF1', 'C_wise_F1', 'C_wise_acc', 'OP', 'OR', 'OF1'],
                     metric_options=None,
                 )

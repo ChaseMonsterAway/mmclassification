@@ -7,15 +7,16 @@ import torch
 
 from sklearn.metrics import roc_curve, auc
 
+
 def tpr_with_fix_fpr(pred, gt, value):
     fpr, tpr, thr = roc_curve(gt, pred)
-    ind = np.where(fpr<=value)[0][-1]
+    ind = np.where(fpr <= value)[0][-1]
     auc_area = auc(fpr, tpr)
     return fpr[ind], tpr[ind], thr[ind], auc_area
 
 
 def average_performance(pred, target, thr=None, k=None, class_wise=False,
-        value=0.05):
+                        value=0.05):
     """Calculate CP, CR, CF1, OP, OR, OF1, where C stands for per-class
     average, O stands for overall average, P stands for precision, R stands for
     recall and F1 stands for F1-score.
@@ -35,16 +36,6 @@ def average_performance(pred, target, thr=None, k=None, class_wise=False,
     Returns:
         tuple: (CP, CR, CF1, OP, OR, OF1)
     """
-    nums=1 if pred.ndim == 1 else pred.shape[-1]
-    each_class_info = list()
-    for num in nums:
-        p = pred[..., num]
-        g = target[..., num]
-        fpr, tpr, thr, auc_area = tpr_with_fix_fpr(p, g, value=value)
-        each_class_info.append(np.array(np.round(fpr, 4), np.round(tpr, 4),
-            np.round(thr, 4), np.round(auc_area, 4), '||'))
-    tpr_at_fpr = np.concatenate(each_class_info, axis=0)
-
     if isinstance(pred, torch.Tensor) and isinstance(target, torch.Tensor):
         pred = pred.detach().cpu().numpy()
         target = target.detach().cpu().numpy()
@@ -81,7 +72,7 @@ def average_performance(pred, target, thr=None, k=None, class_wise=False,
     fn = ((1 - pos_inds) * target) == 1
     tn = np.logical_and(1 - pos_inds, target == 0)
     acc_class = (tp.sum(axis=0) + tn.sum(axis=0)) / (tp.sum(axis=0) + \
-                tn.sum(axis=0) + fn.sum(axis=0) + fp.sum(axis=0))
+                                                     tn.sum(axis=0) + fn.sum(axis=0) + fp.sum(axis=0))
     precision_class = tp.sum(axis=0) / np.maximum(
         tp.sum(axis=0) + fp.sum(axis=0), eps)
     recall_class = tp.sum(axis=0) / np.maximum(
@@ -97,8 +88,22 @@ def average_performance(pred, target, thr=None, k=None, class_wise=False,
     if class_wise:
         C_wise_F1 = 100 * 2 * precision_class * recall_class / \
                     np.maximum(precision_class + recall_class, eps)
-        C_wise_F1 = np.concatenate([np.round(C_wise_F1, 2), np.round(tpr, 2),
-            np.round(fpr, 2), tpr_at_fpr])
+        C_wise_F1 = np.concatenate([np.round(C_wise_F1, 2), np.round(tpr, 2), np.round(fpr, 2)])
         return CP, CR, CF1, C_wise_F1, np.round(100 * acc_class, 2), OP, OR, OF1
 
     return CP, CR, CF1, OP, OR, OF1
+
+
+def tpr_at_fprs(pred, target, fpr_value=(0.05,), class_names=None):
+    nums = 1 if pred.ndim == 1 else pred.shape[-1]
+    total_info = '\n'
+    for nidx, num in enumerate(nums):
+        p = pred[..., num]
+        g = target[..., num]
+        info_at_fpr = f'{class_names[nidx]}: ' if class_names is not None else f'{nidx}: '
+        for fidx, fprv in enumerate(fpr_value):
+            fpr, tpr, thr, auc_area = tpr_with_fix_fpr(p, g, value=fprv)
+            info_at_fpr += f'@{fprv} \tfpr: {np.round(fpr, 5)} tpr: {np.round(tpr, 5)} thr: {np.round(thr, 4)} auc: {np.round(auc_area, 4)} | '
+        info_at_fpr += '\n'
+        total_info += info_at_fpr
+    return total_info
