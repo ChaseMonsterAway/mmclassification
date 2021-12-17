@@ -97,7 +97,7 @@ def average_performance(pred, target, thr=None, k=None, class_wise=False,
 def tpr_at_fprs(pred, target, fpr_value=(0.05,), class_names=None):
     nums = 1 if pred.ndim == 1 else pred.shape[-1]
     total_info = '\n'
-    for nidx, num in enumerate(nums):
+    for nidx, num in enumerate(range(nums)):
         p = pred[..., num]
         g = target[..., num]
         info_at_fpr = f'{class_names[nidx]}: ' if class_names is not None else f'{nidx}: '

@@ -1,5 +1,6 @@
 import warnings
 from collections import OrderedDict
+import pdb
 
 import numpy as np
 
@@ -211,14 +212,15 @@ class HierarchicalDataset(BaseDataset):
                           '`metric_options`.')
             metric_options = {**deprecated_kwargs}
 
-        if isinstance(metric, str):
-            metrics = [metric]
-        else:
-            metrics = metric
+        # if isinstance(metric, str):
+        #     metrics = [metric]
+        # else:
+        #     metrics = metric
         if file_type['class_wise']:
             allowed_metrics = ['mAP', 'CP', 'CR', 'CF1', 'C_wise_F1', 'C_wise_acc', 'OP', 'OR', 'OF1']
         else:
             allowed_metrics = ['mAP', 'CP', 'CR', 'CF1', 'OP', 'OR', 'OF1']
+        metrics = allowed_metrics
         eval_results = {}
         # results = np.vstack(results)
         # gt_labels = self.get_gt_labels()
@@ -242,7 +244,7 @@ class HierarchicalDataset(BaseDataset):
             if self.tpr_at_fpr:
                 info = tpr_at_fprs(results, gt_labels, fpr_value=self.fpr, class_names=file_type['class_name'])
                 import logging
-                logger = logging.getLogger()
+                logger = logging.getLogger('mmcls')
                 logger.info(info)
             performance_values = average_performance(results, gt_labels,
                                                      **metric_options)
