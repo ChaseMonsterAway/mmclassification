@@ -5,7 +5,7 @@ import warnings
 import numpy as np
 import torch
 
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve, auc, precision_recall_curve
 
 
 def tpr_with_fix_fpr(pred, gt, value):
@@ -13,6 +13,12 @@ def tpr_with_fix_fpr(pred, gt, value):
     ind = np.where(fpr <= value)[0][-1]
     auc_area = auc(fpr, tpr)
     return fpr[ind], tpr[ind], thr[ind], auc_area
+
+
+def recall_with_fix_precision(pred, gt, value):
+    precision, recall, thr = precision_recall_curve(gt, pred)
+    ind = np.where(precision >= value)[0][-1]
+    return precision[ind], recall[ind], thr[ind]
 
 
 def average_performance(pred, target, thr=None, k=None, class_wise=False,
@@ -103,8 +109,11 @@ def tpr_at_fprs(pred, target, fpr_value=(0.05,), class_names=None):
         info_at_fpr = f'{class_names[nidx]}:\n' if class_names is not None else f'{nidx}:\n'
         for fidx, fprv in enumerate(fpr_value):
             fpr, tpr, thr, auc_area = tpr_with_fix_fpr(p, g, value=fprv)
-            info_at_fpr += f'\t@{fprv} \t\t fpr: {np.round(fpr, 5)} tpr: {np.round(tpr, 5)} ' \
-                           f'thr: {np.round(thr, 4)} auc: {np.round(auc_area, 4)}\n'
+            info_at_fpr += f'\t@{str(fprv).ljust(10)} ' \
+                           f'fpr: {str(np.round(fpr, 5)).ljust(10)} ' \
+                           f'tpr: {str(np.round(tpr, 5)).ljust(10)} ' \
+                           f'thr: {str(np.round(thr, 4)).ljust(10)} ' \
+                           f'auc: {str(np.round(auc_area, 4)).ljust(10)}\n'
         info_at_fpr += '\n'
         total_info += info_at_fpr
     return total_info
