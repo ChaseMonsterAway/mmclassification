@@ -44,7 +44,7 @@ def cross_entropy(pred,
     if weight is not None:
         weight = weight.float()
     if masks is not None:
-        loss = loss * masks
+        loss = loss * masks[:, 0]
     loss = weight_reduce_loss(
         loss, weight=weight, reduction=reduction, avg_factor=avg_factor)
 
@@ -80,8 +80,6 @@ def soft_cross_entropy(pred,
         label = label.reshape(-1, )
     loss = -label * F.log_softmax(pred, dim=-1)
     if masks is not None:
-        import pdb
-        pdb.set_trace()
         loss *= masks
     if class_weight is not None:
         loss *= class_weight
@@ -197,11 +195,10 @@ class HierarchicalCrossEntropyLoss(nn.Module):
 
     def _generate_mask(self, label, cls_score):
         masks = torch.ones_like(cls_score).to(cls_score.device)
-        face_label = label[:, 0]
-        hand_label = label[:, 1]
+        face_hand_label = label[:, 0]
         # face, hand | smoke_face, insulating gloves, smoke_hand
-        masks[face_label == 1] = torch.tensor([1, 1, 1, 0, 0], dtype=cls_score.dtype).to(cls_score.device)
-        masks[hand_label == 1] = torch.tensor([1, 1, 0, 1, 1], dtype=cls_score.dtype).to(cls_score.device)
+        masks[face_hand_label == 0] = torch.tensor([1, 1, 1, 0, 0], dtype=cls_score.dtype).to(cls_score.device)
+        masks[face_hand_label == 1] = torch.tensor([1, 1, 0, 1, 1], dtype=cls_score.dtype).to(cls_score.device)
         return masks
 
     def _compute_loss(self,
@@ -220,8 +217,7 @@ class HierarchicalCrossEntropyLoss(nn.Module):
             start = 0 if idx == 0 else self.split[idx - 1]
             label_start = 0 if idx == 0 else self.label_split[idx - 1]
             label_end = self.label_split[idx]
-            # pdb.set_trace()
-            cmask = mask[..., label_start:label_end] if mask is not None else mask
+            cmask = mask[..., start:end] if mask is not None else mask
             single_loss = self.cls_criterion[idx](cls_score[..., start:end],
                                                   label[..., label_start:label_end],
                                                   weight,
