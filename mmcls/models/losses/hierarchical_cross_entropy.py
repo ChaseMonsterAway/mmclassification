@@ -194,7 +194,7 @@ class HierarchicalCrossEntropyLoss(nn.Module):
         self.label_split = self.label_split[1:]
 
     def _generate_mask(self, label, cls_score):
-        masks = np.ones_like(cls_score).to(cls_score.device)
+        masks = torch.ones_like(cls_score).to(cls_score.device)
         face_label = label[:, 0]
         hand_label = label[:, 1]
         # face, hand | smoke_face, insulating gloves, smoke_hand
