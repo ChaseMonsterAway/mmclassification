@@ -75,7 +75,7 @@ class ASPP(BaseModule):
 
         self.project = nn.Sequential(
             nn.Conv2d(5 * out_channels, out_channels, 1, bias=False),
-            norm_layer(out_channels), act_layer(out_channels))
+            norm_layer(out_channels), act_layer())
         self.with_dropout = dropout is not None
         if self.with_dropout:
             self.dropout = nn.Dropout(dropout)
@@ -88,5 +88,5 @@ class ASPP(BaseModule):
         res = self.project(res)
         if self.with_dropout:
             res = self.dropout(res)
-            
+
         return res
