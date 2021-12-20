@@ -2,6 +2,7 @@
 import pdb
 from functools import partial
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,7 +17,8 @@ def cross_entropy(pred,
                   weight=None,
                   reduction='mean',
                   avg_factor=None,
-                  class_weight=None):
+                  class_weight=None,
+                  masks=None, ):
     """Calculate the CrossEntropy loss.
 
     Args:
@@ -41,6 +43,8 @@ def cross_entropy(pred,
     # apply weights and do the reduction
     if weight is not None:
         weight = weight.float()
+    if masks is not None:
+        loss = loss * masks
     loss = weight_reduce_loss(
         loss, weight=weight, reduction=reduction, avg_factor=avg_factor)
 
@@ -52,7 +56,8 @@ def soft_cross_entropy(pred,
                        weight=None,
                        reduction='mean',
                        class_weight=None,
-                       avg_factor=None):
+                       avg_factor=None,
+                       masks=None, ):
     """Calculate the Soft CrossEntropy loss. The label can be float.
 
     Args:
@@ -74,6 +79,8 @@ def soft_cross_entropy(pred,
     if pred.size() != label.size():
         label = label.reshape(-1, )
     loss = -label * F.log_softmax(pred, dim=-1)
+    if masks is not None:
+        loss *= masks
     if class_weight is not None:
         loss *= class_weight
     loss = loss.sum(dim=-1)
@@ -92,7 +99,8 @@ def binary_cross_entropy(pred,
                          weight=None,
                          reduction='mean',
                          avg_factor=None,
-                         class_weight=None):
+                         class_weight=None,
+                         masks=None):
     r"""Calculate the binary CrossEntropy loss with logits.
 
     Args:
@@ -120,7 +128,8 @@ def binary_cross_entropy(pred,
         class_weight = class_weight.repeat(N, 1)
     loss = F.binary_cross_entropy_with_logits(
         pred, label, weight=class_weight, reduction='none')
-
+    if masks is not None:
+        loss *= masks
     # apply weights and do the reduction
     if weight is not None:
         assert weight.dim() == 1
@@ -143,10 +152,12 @@ class HierarchicalCrossEntropyLoss(nn.Module):
                  reduction='mean',
                  loss_weight=1.0,
                  use_focal=False,
+                 fixed_mask=False,
                  gamma=2.0,
                  alpha=0.5,
                  class_weight=None):
         super(HierarchicalCrossEntropyLoss, self).__init__()
+        self.fix_mask = fixed_mask
         self.use_sigmoid = use_sigmoid
         self.use_soft = use_soft
         assert len(split) == levels == len(use_soft) == len(use_sigmoid)
@@ -182,6 +193,15 @@ class HierarchicalCrossEntropyLoss(nn.Module):
                 self.label_split.append(self.label_split[-1] + 1)
         self.label_split = self.label_split[1:]
 
+    def _generate_mask(self, label, cls_score):
+        masks = np.ones_like(cls_score).to(cls_score.device)
+        face_label = label[:, 0]
+        hand_label = label[:, 1]
+        # face, hand | smoke_face, insulating gloves, smoke_hand
+        masks[face_label == 1] = torch.tensor([1, 1, 1, 0, 0], dtype=cls_score.dtype).to(cls_score.device)
+        masks[hand_label == 1] = torch.tensor([1, 1, 0, 1, 1], dtype=cls_score.dtype).to(cls_score.device)
+        return masks
+
     def _compute_loss(self,
                       cls_score,
                       label,
@@ -192,22 +212,25 @@ class HierarchicalCrossEntropyLoss(nn.Module):
                       **kwargs
                       ):
         assert max(self.split) == cls_score.size(-1)
+        mask = self._generate_mask(label, cls_score) if self.fix_mask else None
         loss_cls = []
         for idx, end in enumerate(self.split):
             start = 0 if idx == 0 else self.split[idx - 1]
             label_start = 0 if idx == 0 else self.label_split[idx - 1]
             label_end = self.label_split[idx]
             # pdb.set_trace()
+            cmask = mask[..., label_start:label_end] if mask is not None else mask
             single_loss = self.cls_criterion[idx](cls_score[..., start:end],
                                                   label[..., label_start:label_end],
                                                   weight,
                                                   class_weight=class_weight,
                                                   reduction=reduction,
                                                   avg_factor=avg_factor,
+                                                  masks=cmask,
                                                   **kwargs
                                                   )
             loss_cls.append(single_loss)
-        
+
         return torch.stack(loss_cls).mean()
 
     def forward(self,

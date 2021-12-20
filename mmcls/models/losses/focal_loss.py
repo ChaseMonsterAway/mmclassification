@@ -36,6 +36,7 @@ def sigmoid_focal_loss(pred,
     """
     assert pred.shape == \
         target.shape, 'pred and target should be in the same shape.'
+    masks = kwargs.get('masks', None)
     pred_sigmoid = pred.sigmoid()
     target = target.type_as(pred)
     pt = (1 - pred_sigmoid) * target + pred_sigmoid * (1 - target)
@@ -43,6 +44,8 @@ def sigmoid_focal_loss(pred,
                     (1 - target)) * pt.pow(gamma)
     loss = F.binary_cross_entropy_with_logits(
         pred, target, reduction='none') * focal_weight
+    if masks is not None:
+        loss *= masks
     if weight is not None:
         assert weight.dim() == 1
         weight = weight.float()
