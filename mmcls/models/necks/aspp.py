@@ -80,13 +80,23 @@ class ASPP(BaseModule):
         if self.with_dropout:
             self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x):
+    def single_forward(self, x):
         res = []
         for conv in self.convs:
-            res.append(conv(x))
+            x = conv(x)
+            res.append(x)
         res = torch.cat(res, dim=1)
         res = self.project(res)
         if self.with_dropout:
             res = self.dropout(res)
-
         return res
+
+    def forward(self, inputs):
+        if isinstance(inputs, tuple):
+            outs = tuple([self.single_forward(x) for x in inputs])
+        elif isinstance(inputs, torch.Tensor):
+            outs = self.single_forward(inputs)
+        else:
+            raise TypeError('neck inputs should be tuple or torch.tensor')
+
+        return outs
