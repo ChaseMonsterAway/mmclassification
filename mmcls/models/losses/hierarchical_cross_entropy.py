@@ -80,6 +80,8 @@ def soft_cross_entropy(pred,
         label = label.reshape(-1, )
     loss = -label * F.log_softmax(pred, dim=-1)
     if masks is not None:
+        import pdb
+        pdb.set_trace()
         loss *= masks
     if class_weight is not None:
         loss *= class_weight
