@@ -195,11 +195,10 @@ class HierarchicalCrossEntropyLoss(nn.Module):
 
     def _generate_mask(self, label, cls_score):
         masks = torch.ones_like(cls_score).to(cls_score.device)
-        face_label = label[:, 0]
-        hand_label = label[:, 1]
+        face_hand_label = label[:, 0]
         # face, hand | smoke_face, insulating gloves, smoke_hand
-        masks[face_label == 1] = torch.tensor([1, 1, 1, 0, 0], dtype=cls_score.dtype).to(cls_score.device)
-        masks[hand_label == 1] = torch.tensor([1, 1, 0, 1, 1], dtype=cls_score.dtype).to(cls_score.device)
+        masks[face_hand_label == 0] = torch.tensor([1, 1, 1, 0, 0], dtype=cls_score.dtype).to(cls_score.device)
+        masks[face_hand_label == 1] = torch.tensor([1, 1, 0, 1, 1], dtype=cls_score.dtype).to(cls_score.device)
         return masks
 
     def _compute_loss(self,
