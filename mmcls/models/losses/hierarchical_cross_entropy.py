@@ -44,7 +44,7 @@ def cross_entropy(pred,
     if weight is not None:
         weight = weight.float()
     if masks is not None:
-        loss = loss * masks
+        loss = loss * masks[:, 0]
     loss = weight_reduce_loss(
         loss, weight=weight, reduction=reduction, avg_factor=avg_factor)
 
@@ -80,8 +80,6 @@ def soft_cross_entropy(pred,
         label = label.reshape(-1, )
     loss = -label * F.log_softmax(pred, dim=-1)
     if masks is not None:
-        import pdb
-        pdb.set_trace()
         loss *= masks
     if class_weight is not None:
         loss *= class_weight
@@ -220,8 +218,7 @@ class HierarchicalCrossEntropyLoss(nn.Module):
             start = 0 if idx == 0 else self.split[idx - 1]
             label_start = 0 if idx == 0 else self.label_split[idx - 1]
             label_end = self.label_split[idx]
-            # pdb.set_trace()
-            cmask = mask[..., label_start:label_end] if mask is not None else mask
+            cmask = mask[..., start:end] if mask is not None else mask
             single_loss = self.cls_criterion[idx](cls_score[..., start:end],
                                                   label[..., label_start:label_end],
                                                   weight,
