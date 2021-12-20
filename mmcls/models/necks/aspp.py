@@ -83,8 +83,7 @@ class ASPP(BaseModule):
     def single_forward(self, x):
         res = []
         for conv in self.convs:
-            x = conv(x)
-            res.append(x)
+            res.append(conv(x))
         res = torch.cat(res, dim=1)
         res = self.project(res)
         if self.with_dropout:
