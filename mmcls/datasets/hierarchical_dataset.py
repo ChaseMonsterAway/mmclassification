@@ -1,8 +1,10 @@
+import copy
 import warnings
 from collections import OrderedDict
 import pdb
 
 import numpy as np
+import torch
 
 from mmcls.core import average_performance, mAP, tpr_at_fprs
 from mmcls.core.evaluation import precision_recall_f1, support
@@ -20,6 +22,7 @@ class HierarchicalDataset(BaseDataset):
                      dict(type='ce', max_len=3),
                      dict(type='bce', max_len=3, class_name=None, class_wise=True),
                  ],
+                 eval_by_class=False,
                  fpr=(0.0001, 0.001, 0.01),
                  tpr_at_fpr=True,
                  **kwargs,
@@ -28,6 +31,7 @@ class HierarchicalDataset(BaseDataset):
         assert isinstance(file_type, (list, tuple))
         assert isinstance(kwargs.get('ann_file', None), (list, tuple))
         assert len(file_type) == len(kwargs.get('ann_file', []))
+        self.eval_by_class = eval_by_class
         self.fpr = fpr
         self.tpr_at_fpr = tpr_at_fpr
         self.file_type = file_type
@@ -277,9 +281,15 @@ class HierarchicalDataset(BaseDataset):
                     metric='accuracy',
                     metric_options=None,
                 )
+                ce_results = results[..., res_start_idx: res_end_idx]  # 0: face, 1: hand, N*2
             elif file_type['type'] == 'bce':
+                bce_pd = results[..., res_start_idx: res_end_idx]
+                if self.eval_by_class:
+                    inds = ce_results.argmax(dim=-1)
+                    bce_pd[inds == 0] *= torch.tensor([[1, 0, 0]], dtype=torch.float).to(bce_pd.device)
+                    bce_pd[inds == 1] *= torch.tensor([[0, 1, 1]], dtype=torch.float).to(bce_pd.device)
                 eval_results = self.evaluate_bce(
-                    results[..., res_start_idx: res_end_idx],
+                    bce_pd,
                     gt_labels[..., label_start_idx: label_end_idx],
                     file_type,
                     metric=['mAP', 'CP', 'CR', 'CF1', 'C_wise_F1', 'C_wise_acc', 'OP', 'OR', 'OF1'],
