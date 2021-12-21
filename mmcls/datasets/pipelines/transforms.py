@@ -5,6 +5,7 @@ import random
 from numbers import Number
 from typing import Sequence
 
+import cv2
 import mmcv
 import numpy as np
 
@@ -528,7 +529,7 @@ class RandomErasing(object):
             aspect_range = min(aspect_range, 1 / aspect_range)
             aspect_range = (aspect_range, 1 / aspect_range)
         assert isinstance(aspect_range, Sequence) and len(aspect_range) == 2 \
-            and all(isinstance(x, float) for x in aspect_range), \
+               and all(isinstance(x, float) for x in aspect_range), \
             'aspect_range should be a float or Sequence with two float.'
         assert all(x > 0 for x in aspect_range), \
             'aspect_range should be positive.'
@@ -538,13 +539,13 @@ class RandomErasing(object):
         if isinstance(fill_color, Number):
             fill_color = [fill_color] * 3
         assert isinstance(fill_color, Sequence) and len(fill_color) == 3 \
-            and all(isinstance(x, Number) for x in fill_color), \
+               and all(isinstance(x, Number) for x in fill_color), \
             'fill_color should be a float or Sequence with three int.'
         if fill_std is not None:
             if isinstance(fill_std, Number):
                 fill_std = [fill_std] * 3
             assert isinstance(fill_std, Sequence) and len(fill_std) == 3 \
-                and all(isinstance(x, Number) for x in fill_std), \
+                   and all(isinstance(x, Number) for x in fill_std), \
                 'fill_std should be a float or Sequence with three int.'
 
         self.erase_prob = erase_prob
@@ -1079,3 +1080,20 @@ class Filter(object):
     def __repr__(self):
         repr_str = self.__class__.__name__ + f'(min_size={self.min_size})'
 
+
+@PIPELINES.register_module()
+class RandomSize(object):
+    def __init__(self,
+                 sizes=(64, 320),
+                 interval=16,
+                 ):
+        self.sizes = list(range(sizes[0], sizes[1] + 1, interval))
+
+    def __call__(self, results):
+        for key in results.get('img_fields', ['img']):
+            img = results[key]
+            size = random.choice(self.sizes)
+            results[key] = cv2.resize(img, (size, size))
+            results['img_shape'] = results[key].shape
+
+        return results
