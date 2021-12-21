@@ -9,6 +9,8 @@ from sklearn.metrics import roc_curve, auc, precision_recall_curve
 
 
 def tpr_with_fix_fpr(pred, gt, value):
+    pred = pred[gt != -1]
+    gt = gt[gt != -1]
     fpr, tpr, thr = roc_curve(gt, pred)
     ind = np.where(fpr <= value)[0][-1]
     auc_area = auc(fpr, tpr)
@@ -100,12 +102,19 @@ def average_performance(pred, target, thr=None, k=None, class_wise=False,
     return CP, CR, CF1, OP, OR, OF1
 
 
-def tpr_at_fprs(pred, target, fpr_value=(0.05,), class_names=None):
+def tpr_at_fprs(pred, target, fpr_value=(0.05,), class_names=None, ce_res=None):
     nums = 1 if pred.ndim == 1 else pred.shape[-1]
     total_info = '\n'
     for nidx, num in enumerate(range(nums)):
         p = pred[..., num]
         g = target[..., num]
+        if ce_res is not None:
+            if nidx == 0:
+                p = p[ce_res == 0]
+                g = target[ce_res == 0]
+            else:
+                p = p[ce_res == 1]
+                g = target[ce_res == 1]
         info_at_fpr = f'{class_names[nidx]}:\n' if class_names is not None else f'{nidx}:\n'
         for fidx, fprv in enumerate(fpr_value):
             fpr, tpr, thr, auc_area = tpr_with_fix_fpr(p, g, value=fprv)

@@ -191,6 +191,7 @@ class HierarchicalDataset(BaseDataset):
                      metric='mAP',
                      metric_options=None,
                      logger=None,
+                     ce_result,
                      **deprecated_kwargs):
         """Evaluate the dataset.
 
@@ -246,7 +247,8 @@ class HierarchicalDataset(BaseDataset):
                 performance_keys = ['CP', 'CR', 'CF1', 'OP', 'OR', 'OF1']
             metric_options['class_wise'] = file_type['class_wise']
             if self.tpr_at_fpr:
-                info = tpr_at_fprs(results, gt_labels, fpr_value=self.fpr, class_names=file_type['class_name'])
+                info = tpr_at_fprs(results, gt_labels, fpr_value=self.fpr, class_names=file_type['class_name'],
+                                   ce_res=ce_result)
                 import logging
                 logger = logging.getLogger('mmcls')
                 logger.info(info)
@@ -284,16 +286,13 @@ class HierarchicalDataset(BaseDataset):
                 ce_results = results[..., res_start_idx: res_end_idx]  # 0: face, 1: hand, N*2
             elif file_type['type'] == 'bce':
                 bce_pd = results[..., res_start_idx: res_end_idx]
-                if self.eval_by_class:
-                    inds = ce_results.argmax(dim=-1)
-                    bce_pd[inds == 0] *= torch.tensor([[1, 0, 0]], dtype=torch.float).to(bce_pd.device)
-                    bce_pd[inds == 1] *= torch.tensor([[0, 1, 1]], dtype=torch.float).to(bce_pd.device)
                 eval_results = self.evaluate_bce(
                     bce_pd,
                     gt_labels[..., label_start_idx: label_end_idx],
                     file_type,
                     metric=['mAP', 'CP', 'CR', 'CF1', 'C_wise_F1', 'C_wise_acc', 'OP', 'OR', 'OF1'],
                     metric_options=None,
+                    ce_info=ce_results,
                 )
             else:
                 raise TypeError(f"File type only support 'ce' and 'bce' but got {file_type['type']}")
