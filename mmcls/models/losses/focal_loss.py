@@ -48,6 +48,7 @@ def sigmoid_focal_loss(pred,
         pred, target, reduction='none') * focal_weight
     if masks is not None:
         loss *= masks
+        loss /= masks.sum(dim=0, keepdims=True)
     if weight is not None:
         assert weight.dim() == 1
         weight = weight.float()

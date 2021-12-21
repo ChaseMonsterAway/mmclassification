@@ -179,17 +179,17 @@ class HierarchicalCrossEntropyLoss(nn.Module):
             if self.use_sigmoid[idx]:
                 if use_focal:
                     partial_focal = partial(
-                        sigmoid_focal_loss, gamma=gamma, alpha=alpha
+                        sigmoid_focal_loss, gamma=gamma, alpha=alpha, reduction='sum'
                     )
                     self.cls_criterion.append(partial_focal)
                 else:
-                    self.cls_criterion.append(binary_cross_entropy)
+                    self.cls_criterion.append(partial(binary_cross_entropy, reduction='mean'))
                 self.label_split.append(self.label_split[-1] + end - start)
             elif self.use_soft[idx]:
-                self.cls_criterion.append(soft_cross_entropy)
+                self.cls_criterion.append(partial(soft_cross_entropy, reduction='mean'))
                 self.label_split.append(self.label_split[-1] + 1)
             else:
-                self.cls_criterion.append(cross_entropy)
+                self.cls_criterion.append(partial(cross_entropy, reduction='mean'))
                 self.label_split.append(self.label_split[-1] + 1)
         self.label_split = self.label_split[1:]
 
@@ -222,7 +222,6 @@ class HierarchicalCrossEntropyLoss(nn.Module):
                                                   label[..., label_start:label_end],
                                                   weight,
                                                   class_weight=class_weight,
-                                                  reduction=reduction,
                                                   avg_factor=avg_factor,
                                                   masks=cmask,
                                                   **kwargs
