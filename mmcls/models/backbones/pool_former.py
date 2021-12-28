@@ -39,6 +39,9 @@ from .base_backbone import BaseBackbone
 #     'poolformer_m': _cfg(crop_pct=0.95),
 # }
 
+def to_2tuple(x):
+    return (x, x)
+
 
 class PatchEmbed(nn.Module):
     """
