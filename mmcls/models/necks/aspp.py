@@ -37,6 +37,11 @@ class ASPPPooling(nn.Sequential):
 
     def forward(self, x):
         y = super(ASPPPooling, self).forward(x)
+        # return torch.ones(1, 512, 8, 8) * y
+        # return F.interpolate(y,
+        #                      size=(8, 8),
+        #                      mode=self.mode,
+        #                      align_corners=self.align_corners)
         return F.interpolate(y,
                              size=(int(x.size(2)), int(x.size(3))),
                              mode=self.mode,

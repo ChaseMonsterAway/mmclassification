@@ -178,8 +178,9 @@ class HierarchicalCrossEntropyLoss(nn.Module):
             end = self.split[idx]
             if self.use_sigmoid[idx]:
                 if use_focal:
+                    reduction_type = 'sum' if self.fix_mask else 'mean'
                     partial_focal = partial(
-                        sigmoid_focal_loss, gamma=gamma, alpha=alpha, reduction='sum'
+                        sigmoid_focal_loss, gamma=gamma, alpha=alpha, reduction=reduction_type
                     )
                     self.cls_criterion.append(partial_focal)
                 else:

@@ -191,7 +191,7 @@ class HierarchicalDataset(BaseDataset):
                      metric='mAP',
                      metric_options=None,
                      logger=None,
-                     ce_result,
+                     ce_result=None,
                      **deprecated_kwargs):
         """Evaluate the dataset.
 
@@ -283,16 +283,18 @@ class HierarchicalDataset(BaseDataset):
                     metric='accuracy',
                     metric_options=None,
                 )
-                ce_results = results[..., res_start_idx: res_end_idx]  # 0: face, 1: hand, N*2
+                ce_results = gt_labels[..., label_start_idx: label_end_idx]  # 0: face, 1: hand, N*2
             elif file_type['type'] == 'bce':
                 bce_pd = results[..., res_start_idx: res_end_idx]
+                if not self.eval_by_class:
+                    ce_results=None
                 eval_results = self.evaluate_bce(
                     bce_pd,
                     gt_labels[..., label_start_idx: label_end_idx],
                     file_type,
                     metric=['mAP', 'CP', 'CR', 'CF1', 'C_wise_F1', 'C_wise_acc', 'OP', 'OR', 'OF1'],
                     metric_options=None,
-                    ce_info=ce_results,
+                    ce_result=ce_results,
                 )
             else:
                 raise TypeError(f"File type only support 'ce' and 'bce' but got {file_type['type']}")

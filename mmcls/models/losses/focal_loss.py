@@ -36,6 +36,7 @@ def sigmoid_focal_loss(pred,
     Returns:
         torch.Tensor: Loss.
     """
+    avg_factor=None if reduction=='sum' else avg_factor
     assert pred.shape == \
         target.shape, 'pred and target should be in the same shape.'
     masks = kwargs.get('masks', None)
@@ -48,7 +49,7 @@ def sigmoid_focal_loss(pred,
         pred, target, reduction='none') * focal_weight
     if masks is not None:
         loss *= masks
-        loss /= masks.sum(dim=0, keepdims=True)
+        loss /= (masks.sum(dim=0, keepdims=True) + 1e-10)
     if weight is not None:
         assert weight.dim() == 1
         weight = weight.float()

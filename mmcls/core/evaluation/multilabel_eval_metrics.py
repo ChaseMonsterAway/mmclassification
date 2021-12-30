@@ -110,11 +110,11 @@ def tpr_at_fprs(pred, target, fpr_value=(0.05,), class_names=None, ce_res=None):
         g = target[..., num]
         if ce_res is not None:
             if nidx == 0:
-                p = p[ce_res == 0]
-                g = target[ce_res == 0]
+                p = p[ce_res.flatten() == 0]
+                g = g[ce_res.flatten() == 0]
             else:
-                p = p[ce_res == 1]
-                g = target[ce_res == 1]
+                p = p[ce_res.flatten() == 1]
+                g = g[ce_res.flatten() == 1]
         info_at_fpr = f'{class_names[nidx]}:\n' if class_names is not None else f'{nidx}:\n'
         for fidx, fprv in enumerate(fpr_value):
             fpr, tpr, thr, auc_area = tpr_with_fix_fpr(p, g, value=fprv)
