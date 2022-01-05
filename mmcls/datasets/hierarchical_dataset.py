@@ -93,7 +93,7 @@ class HierarchicalDataset(BaseDataset):
                             if self.version_map is not None:
                                 new_line = []
                                 for idx2 in range(len(line[1:])):
-                                    new_line.append(self.version_map[line[idx2 + 1]])
+                                    new_line.append(self.version_map[line[idx2 + 1].strip()])
                                 line = line[:1] + new_line
                             pos_inds = list(map(int, line[1:]))
                             pos_inds = [pind for pind in pos_inds if pind < max_len]
