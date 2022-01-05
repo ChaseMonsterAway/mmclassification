@@ -184,7 +184,7 @@ class HierarchicalCrossEntropyLoss(nn.Module):
                     )
                     self.cls_criterion.append(partial_focal)
                 else:
-                    self.cls_criterion.append(partial(binary_cross_entropy, reduction='mean'))
+                    self.cls_criterion.append(partial(binary_cross_entropy, reduction=reduction_type))
                 self.label_split.append(self.label_split[-1] + end - start)
             elif self.use_soft[idx]:
                 self.cls_criterion.append(partial(soft_cross_entropy, reduction='mean'))
