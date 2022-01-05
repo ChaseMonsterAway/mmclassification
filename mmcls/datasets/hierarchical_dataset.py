@@ -1,21 +1,37 @@
-import copy
 import warnings
 from collections import OrderedDict
-import pdb
 
 import numpy as np
-import torch
 
 from mmcls.core import average_performance, mAP, tpr_at_fprs
 from mmcls.core.evaluation import precision_recall_f1, support
 from mmcls.models.losses import accuracy
-
-from .builder import DATASETS
 from .base_dataset import BaseDataset
+from .builder import DATASETS
+
+v1_1_attrs = [
+    'Male', 'Female', 'SexUnsure', 'UpperBodyLongSleeve', 'UpperBodyShortSleeve',
+    'UpperBodyUnsure', 'LowerBodyTrousers', 'LowerBodyShorts', 'LowerBodyLongSkirt',
+    'LowerBodyShortSkirt', 'LowerBodyUnsure', 'NoHats', 'Hats', 'Helmet', 'MotorHelmet',
+    'HatUnsure', 'NoMask', 'Mask', 'MaskUnwear', 'MaskUnsure', 'Muffler', 'NoMuffler',
+    'MufflerUnsure', 'NoGloves', 'Gloves', 'GlovesUnsure', 'BareFeet', 'Boots',
+    'OtherShoes', 'ShoesUnsure', 'UpRight', 'Squat', 'Lie', 'PoseUnsure', 'Front',
+    'Back', 'LeftSide', 'RightSide', 'OrientationUnsure', 'UpperTrunc', 'NoUpperTrunc',
+    'LowerTrunc', 'NoLowerTrunc', 'NoOcclusion', 'SlightOcclusion', 'HeavyOcclusion',
+    'NoSmoke', 'Smoke', 'SmokeOther', 'SmokeUnsure', 'NoPhone', 'Phone', 'PlayPhone',
+    'PhoneUnsurePhoneUnsure', 'HandHoldSomething', 'HandHoldNothing', 'HandHoldUnsure',
+]
+
+GeneralAttribute_v1_1 = {v: idx for idx, v in enumerate(v1_1_attrs)}
+
+version_map = {
+    'v1.1': GeneralAttribute_v1_1
+}
 
 
 @DATASETS.register_module()
 class HierarchicalDataset(BaseDataset):
+    Male = 1
 
     def __init__(self,
                  file_type=[
@@ -25,12 +41,17 @@ class HierarchicalDataset(BaseDataset):
                  eval_by_class=False,
                  fpr=(0.0001, 0.001, 0.01),
                  tpr_at_fpr=True,
+                 version=None,
                  **kwargs,
                  ):
         assert file_type is not None
         assert isinstance(file_type, (list, tuple))
         assert isinstance(kwargs.get('ann_file', None), (list, tuple))
         assert len(file_type) == len(kwargs.get('ann_file', []))
+        self.version_map = None
+        if version is not None:
+            assert version in version_map, f'Support version are {list(version_map.keys())}'
+            self.version_map = version_map[version]
         self.eval_by_class = eval_by_class
         self.fpr = fpr
         self.tpr_at_fpr = tpr_at_fpr
@@ -69,6 +90,11 @@ class HierarchicalDataset(BaseDataset):
                         max_len = file_type['max_len']
                         label = np.zeros(max_len)
                         if len(line) != 1:
+                            if self.version_map is not None:
+                                new_line = []
+                                for idx in range(len(line[1:])):
+                                    new_line[len(new_line)] = self.version_map[line[idx + 1]]
+                                line = line[:1] + new_line
                             pos_inds = list(map(int, line[1:]))
                             pos_inds = [pind for pind in pos_inds if pind < max_len]
                             if pos_inds:
@@ -282,12 +308,13 @@ class HierarchicalDataset(BaseDataset):
                     gt_labels[..., label_start_idx: label_end_idx],
                     metric='accuracy',
                     metric_options=None,
+                    logger=logger
                 )
                 ce_results = gt_labels[..., label_start_idx: label_end_idx]  # 0: face, 1: hand, N*2
             elif file_type['type'] == 'bce':
                 bce_pd = results[..., res_start_idx: res_end_idx]
                 if not self.eval_by_class:
-                    ce_results=None
+                    ce_results = None
                 eval_results = self.evaluate_bce(
                     bce_pd,
                     gt_labels[..., label_start_idx: label_end_idx],
@@ -295,6 +322,7 @@ class HierarchicalDataset(BaseDataset):
                     metric=['mAP', 'CP', 'CR', 'CF1', 'C_wise_F1', 'C_wise_acc', 'OP', 'OR', 'OF1'],
                     metric_options=None,
                     ce_result=ce_results,
+                    logger=logger
                 )
             else:
                 raise TypeError(f"File type only support 'ce' and 'bce' but got {file_type['type']}")
