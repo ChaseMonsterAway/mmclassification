@@ -19,7 +19,7 @@ v1_1_attrs = [
     'Back', 'LeftSide', 'RightSide', 'OrientationUnsure', 'UpperTrunc', 'NoUpperTrunc',
     'LowerTrunc', 'NoLowerTrunc', 'NoOcclusion', 'SlightOcclusion', 'HeavyOcclusion',
     'NoSmoke', 'Smoke', 'SmokeOther', 'SmokeUnsure', 'NoPhone', 'Phone', 'PlayPhone',
-    'PhoneUnsurePhoneUnsure', 'HandHoldSomething', 'HandHoldNothing', 'HandHoldUnsure',
+    'PhoneUnsure', 'HandHoldSomething', 'HandHoldNothing', 'HandHoldUnsure',
 ]
 
 GeneralAttribute_v1_1 = {v: idx for idx, v in enumerate(v1_1_attrs)}
