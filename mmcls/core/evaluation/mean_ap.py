@@ -74,7 +74,7 @@ def mAP(pred, target):
         ap[k], tp_nums = average_precision(pred[:, k], target[:, k])
         if tp_nums == 0:
             ap[k] = -1
-    ap = ap[ap != 0]
+    ap = ap[ap != -1]
     logger = logging.getLogger('mmcls')
     logger.info(f'Total evaluated classes are {ap.shape[0]} '
                 f'because {num_classes - ap.shape[0]} classes are missed in val set.')
