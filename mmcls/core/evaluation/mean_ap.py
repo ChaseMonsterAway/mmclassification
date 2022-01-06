@@ -1,4 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import logging
+
 import numpy as np
 import torch
 
@@ -40,7 +42,7 @@ def average_precision(pred, target):
     tp[np.logical_not(pos_inds)] = 0
     precision = tp / np.maximum(pn, eps)
     ap = np.sum(precision) / np.maximum(total_pos, eps)
-    return ap
+    return ap, total_pos
 
 
 def mAP(pred, target):
@@ -65,10 +67,16 @@ def mAP(pred, target):
                         'np.ndarray')
 
     assert pred.shape == \
-        target.shape, 'pred and target should be in the same shape.'
+           target.shape, 'pred and target should be in the same shape.'
     num_classes = pred.shape[1]
     ap = np.zeros(num_classes)
     for k in range(num_classes):
-        ap[k] = average_precision(pred[:, k], target[:, k])
+        ap[k], tp_nums = average_precision(pred[:, k], target[:, k])
+        if tp_nums == 0:
+            ap[k] = -1
+    ap = ap[ap != 0]
+    logger = logging.getLogger('mmcls')
+    logger.info(f'Total evaluated classes are {ap.shape[0]} '
+                f'because {num_classes - ap.shape[0]} classes are missed in val set.')
     mean_ap = ap.mean() * 100.0
     return mean_ap
