@@ -45,7 +45,7 @@ def average_precision(pred, target):
     return ap, total_pos
 
 
-def mAP(pred, target):
+def mAP(pred, target, classes=None):
     """Calculate the mean average precision with respect of classes.
 
     Args:
@@ -74,9 +74,18 @@ def mAP(pred, target):
         ap[k], tp_nums = average_precision(pred[:, k], target[:, k])
         if tp_nums == 0:
             ap[k] = -1
-    ap = ap[ap != -1]
     logger = logging.getLogger('mmcls')
+    if classes is not None:
+        base_info = '\n\t'
+        base_info += f"{'class name'.center(30)}\t{'AP'.center(30)}\n\t"
+        for i in range(num_classes):
+            base_info += f"{str(classes[i]).center(30)}\t{str(np.around(ap[i], 4)).center(30)}\n\t"
+        logger.info(base_info)
+
+    ap = ap[ap != -1]
+
     logger.info(f'Total evaluated classes are {ap.shape[0]} '
                 f'because {num_classes - ap.shape[0]} classes are missed in val set.')
+
     mean_ap = ap.mean() * 100.0
     return mean_ap

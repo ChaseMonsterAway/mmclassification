@@ -22,7 +22,9 @@ v1_1_attrs = [
     'PhoneUnsure', 'HandHoldSomething', 'HandHoldNothing', 'HandHoldUnsure',
 ]
 
-GeneralAttribute_v1_1 = {v: idx for idx, v in enumerate(v1_1_attrs)}
+GeneralAttribute_v1_1 = OrderedDict()
+for idx, v in enumerate(v1_1_attrs):
+    GeneralAttribute_v1_1[v] = idx
 
 version_map = {
     'v1.1': GeneralAttribute_v1_1
@@ -264,7 +266,10 @@ class HierarchicalDataset(BaseDataset):
             raise ValueError(f'metric {invalid_metrics} is not supported.')
 
         if 'mAP' in metrics:
-            mAP_value = mAP(results, gt_labels)
+            classes = None
+            if self.version_map is not None:
+                classes = list(self.version_map.keys())
+            mAP_value = mAP(results, gt_labels, classes)
             eval_results['mAP'] = mAP_value
         if len(set(metrics) - {'mAP'}) != 0:
             if file_type['class_wise']:
