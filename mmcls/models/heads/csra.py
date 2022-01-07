@@ -28,9 +28,10 @@ class CSRA(nn.Module):  # one basic block
         else:
             score_soft = self.softmax(score * self.T)
             att_logit = torch.sum(score * score_soft, dim=2)
-        if not self.act:
-            return base_logit + self.lam * att_logit
-        return base_logit + self._act_f(self.lam) * att_logit
+        return base_logit + self.lam * att_logit
+        # if not self.act:
+        #     return base_logit + self.lam * att_logit
+        # return base_logit + self._act_f(self.lam) * att_logit
 
 
 class MHA(nn.Module):  # multi-head attention
@@ -46,11 +47,11 @@ class MHA(nn.Module):  # multi-head attention
         super(MHA, self).__init__()
         self.temp_list = self.temp_settings[num_heads]
         if adp:
-            self.lam = nn.Parameter(torch.FloatTensor(num_heads))
+            self.lam = nn.Parameter(torch.FloatTensor(1))
         nn.Parameter()
         self.multi_head = nn.ModuleList([
             CSRA(input_dim, num_classes, self.temp_list[i], lam) if not adp
-            else CSRA(input_dim, num_classes, self.temp_list[i], self.lam[i], True)
+            else CSRA(input_dim, num_classes, self.temp_list[i], self.lam, True)
             for i in range(num_heads)
         ])
 
@@ -63,9 +64,9 @@ class MHA(nn.Module):  # multi-head attention
 
 @HEADS.register_module()
 class HiearachicalCSRAClsHead(HiearachicalLinearClsHead):
-    def __init__(self, num_heads, lam, **kwargs):
+    def __init__(self, num_heads, lam, adp, **kwargs):
         super(HiearachicalCSRAClsHead, self).__init__(**kwargs)
-        self.fc = MHA(num_heads, lam, kwargs['in_channels'], kwargs['num_classes'], kwargs.get('adp', False))
+        self.fc = MHA(num_heads, lam, kwargs['in_channels'], kwargs['num_classes'], adp)
 
 
 if __name__ == '__main__':
