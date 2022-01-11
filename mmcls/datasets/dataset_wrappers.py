@@ -37,6 +37,28 @@ class ConcatDataset(_ConcatDataset):
             sample_idx = idx - self.cumulative_sizes[dataset_idx - 1]
         return self.datasets[dataset_idx].get_cat_ids(sample_idx)
 
+    def get_gt_labels(self):
+        """Get all ground-truth labels (categories).
+
+        Returns:
+            list[int]: categories for all images.
+        """
+        gt_labels = None
+        for i in range(len(self.datasets)):
+            if gt_labels is None:
+                gt_labels = np.array([data['gt_label'] for data in self.datasets[i].data_infos])
+            else:
+                tmp_labels = np.array([data['gt_label'] for data in self.datasets[i].data_infos])
+                gt_labels = np.concatenate([gt_labels, tmp_labels], axis=0)
+        return gt_labels
+
+    def evaluate(self,
+                 results,
+                 metric='accuracy',
+                 metric_options=None,
+                 logger=None):
+        self.datasets[0].evaluate(results, metric, metric_options, logger)
+
 
 @DATASETS.register_module()
 class RepeatDataset(object):
