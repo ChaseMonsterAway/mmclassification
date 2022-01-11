@@ -22,12 +22,37 @@ v1_1_attrs = [
     'PhoneUnsure', 'HandHoldSomething', 'HandHoldNothing', 'HandHoldUnsure',
 ]
 
-GeneralAttribute_v1_1 = OrderedDict()
-for idx, v in enumerate(v1_1_attrs):
-    GeneralAttribute_v1_1[v] = idx
+v1_2_attrs = [
+    'NormalHuman', 'AbnormalHuman', 'Male', 'Female', 'GenderUnsure',
+    'UpRight', 'Squat', 'Lie', 'PoseUnsure',
+    'Front', 'Back', 'LeftSide', 'RightSide', 'OrientationUnsure',
+    'UpperBodyLongSleeve', 'UpperBodyShortSleeve', 'UpperBodyUnsure', 'UpperBodyInvisible',
+    'LowerBodyTrousers', 'LowerBodyShorts', 'LowerBodyLongSkirt', 'LowerBodyShortSkirt', 'LowerBodyUnsure',
+    'LowerBodyInvisible',
+    'NoHats', 'Hats', 'Helmet', 'HatUnsure', 'HatRegionInvisible',
+    'NoMask', 'Mask', 'MaskUnwear', 'MaskUnsure', 'MaskRegionInvisible',
+    'Muffler', 'NoMuffler', 'MufflerUnsure', 'MufflerRegionInvisible',
+    'NoGloves', 'Gloves', 'GlovesUnsure', 'GlovesRegionInvisible',
+    'BareFeet', 'Boots', 'OtherShoes', 'ShoesUnsure', 'ShoesRegionInvisible',
+    'HandHoldSomething', 'HandHoldNothing', 'HandHoldUnsure', 'HandInvisible',
+    'NoSmoke', 'Smoke', 'SmokeOther', 'SmokeUnsure',
+    'NoPhone', 'Phone', 'PlayPhone', 'PhoneNoUse', 'PhoneUnsure',
+]
 
+
+def generate_dict(attrs):
+    Attr = OrderedDict()
+    for idx, v in enumerate(attrs):
+        Attr[v] = idx
+    return Attr
+
+
+GeneralAttribute_v1_1 = generate_dict(v1_1_attrs)
+GeneralAttribute_v1_2 = generate_dict(v1_1_attrs)
 version_map = {
-    'v1.1': GeneralAttribute_v1_1
+    'v1.1': GeneralAttribute_v1_1,
+    'v1.2': GeneralAttribute_v1_2,
+    'v1.2-20220105': GeneralAttribute_v1_2,
 }
 
 
@@ -44,6 +69,7 @@ class HierarchicalDataset(BaseDataset):
                  fpr=(0.0001, 0.001, 0.01),
                  tpr_at_fpr=True,
                  version=None,
+                 skip=True,
                  **kwargs,
                  ):
         assert file_type is not None
@@ -51,6 +77,7 @@ class HierarchicalDataset(BaseDataset):
         assert isinstance(kwargs.get('ann_file', None), (list, tuple))
         assert len(file_type) == len(kwargs.get('ann_file', []))
         self.version_map = None
+        self.skip = skip
         if version is not None:
             assert version in version_map, f'Support version are {list(version_map.keys())}'
             self.version_map = version_map[version]
@@ -95,7 +122,16 @@ class HierarchicalDataset(BaseDataset):
                             if self.version_map is not None:
                                 new_line = []
                                 for idx2 in range(len(line[1:])):
-                                    new_line.append(self.version_map[line[idx2 + 1].strip()])
+                                    if self.skip and line[idx2 + 1].strip() not in self.version_map:
+                                        continue
+                                    try:
+                                        numerical_attr = self.version_map[line[idx2 + 1].strip()]
+                                    except Exception as e:
+                                        print(e.args)
+                                        print(str(e))
+                                        print(f'Unexpected key is {line[idx2 + 1].strip()}.')
+                                        exit(-1)
+                                    new_line.append(numerical_attr)
                                 line = line[:1] + new_line
                             pos_inds = list(map(int, line[1:]))
                             pos_inds = [pind for pind in pos_inds if pind < max_len]
