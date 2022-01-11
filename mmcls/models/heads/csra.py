@@ -10,11 +10,11 @@ class CSRA(nn.Module):  # one basic block
         super(CSRA, self).__init__()
         self.T = T  # temperature
         if adp:
-            self.lam = nn.Parameter(torch.FloatTensor(1))
+            self.lam = nn.Parameter(torch.tensor(0.1))
         else:
-            self.register_buffer('lam', torch.Tensor(lam).float())
+            self.lam = lam
+            # self.register_buffer('lam', torch.Tensor(lam).float())
 
-        self.lam = lam  # Lambda
         self.head = nn.Conv2d(input_dim, num_classes, 1, bias=False)
         self.softmax = nn.Softmax(dim=2)
 
