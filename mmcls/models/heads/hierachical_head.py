@@ -1,5 +1,4 @@
 # Copyright Jun Sun.
-import pdb
 from functools import partial
 
 import numpy as np
@@ -7,8 +6,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..builder import HEADS
 from .cls_head import ClsHead
+from ..builder import HEADS
 
 
 @HEADS.register_module()
@@ -58,10 +57,10 @@ class HiearachicalLinearClsHead(ClsHead):
             # cls_score[..., start:end] = act_func(cls_score[..., start:end])
             if act_type[idx] != 'softmax':
                 for i in range(start, end):
-                    new_cls_score.append(act_func(cls_score[..., i:i+1]))
+                    new_cls_score.append(act_func(cls_score[..., i:i + 1]))
             else:
                 new_cls_score.append(act_func(cls_score[..., start:end]))
-                
+
         # return cls_score
         # pdb.set_trace()
         return torch.cat(new_cls_score, dim=1)
@@ -79,9 +78,15 @@ class HiearachicalLinearClsHead(ClsHead):
 
         return self.post_process(pred)
 
+    def _compute_ignore_masks(self, gt_label):
+        mask = torch.ones_like(gt_label)
+        mask[gt_label == -1] = 0
+        return mask
+
     def forward_train(self, x, gt_label):
         if isinstance(x, tuple):
             x = x[-1]
         cls_score = self.fc(x)
-        losses = self.loss(cls_score, gt_label)
+        masks = self._compute_ignore_masks(gt_label)
+        losses = self.loss(cls_score, gt_label, masks=masks)
         return losses

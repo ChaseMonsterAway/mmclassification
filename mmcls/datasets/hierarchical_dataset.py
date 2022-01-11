@@ -27,8 +27,7 @@ v1_2_attrs = [
     'UpRight', 'Squat', 'Lie', 'PoseUnsure',
     'Front', 'Back', 'LeftSide', 'RightSide', 'OrientationUnsure',
     'UpperBodyLongSleeve', 'UpperBodyShortSleeve', 'UpperBodyUnsure', 'UpperBodyInvisible',
-    'LowerBodyTrousers', 'LowerBodyShorts', 'LowerBodyLongSkirt', 'LowerBodyShortSkirt', 'LowerBodyUnsure',
-    'LowerBodyInvisible',
+    'LowerBodyTrousers', 'LowerBodyShorts', 'LowerBodyLongSkirt', 'LowerBodyShortSkirt', 'LowerBodyUnsure', 'LowerBodyInvisible',
     'NoHats', 'Hats', 'Helmet', 'HatUnsure', 'HatRegionInvisible',
     'NoMask', 'Mask', 'MaskUnwear', 'MaskUnsure', 'MaskRegionInvisible',
     'Muffler', 'NoMuffler', 'MufflerUnsure', 'MufflerRegionInvisible',
@@ -48,17 +47,36 @@ def generate_dict(attrs):
 
 
 GeneralAttribute_v1_1 = generate_dict(v1_1_attrs)
-GeneralAttribute_v1_2 = generate_dict(v1_1_attrs)
-version_map = {
+GeneralAttribute_v1_2 = generate_dict(v1_2_attrs)
+attr_map_to_ind = {
     'v1.1': GeneralAttribute_v1_1,
     'v1.2': GeneralAttribute_v1_2,
     'v1.2-20220105': GeneralAttribute_v1_2,
 }
 
+ignore_map = {
+    'v1.1 v1.2': list(set(v1_2_attrs) - set(v1_1_attrs))
+}
+
+version_map = {
+    'v1.1 v1.2': {'GenderUnsure': 'SexUnsure'}
+}
+
+
+def generate_ignore_inds(attr1, attr2, map_vesion):
+    inds = []
+    for idx, (key, value) in enumerate(attr_map_to_ind[attr2].items()):
+        if key not in attr_map_to_ind[attr1]:
+            if key in version_map[map_vesion]:
+                if version_map[map_vesion][key] not in attr_map_to_ind[attr1]:
+                    inds.append(idx)
+            else:
+                inds.append(idx)
+    return inds
+
 
 @DATASETS.register_module()
 class HierarchicalDataset(BaseDataset):
-    Male = 1
 
     def __init__(self,
                  file_type=[
@@ -69,6 +87,7 @@ class HierarchicalDataset(BaseDataset):
                  fpr=(0.0001, 0.001, 0.01),
                  tpr_at_fpr=True,
                  version=None,
+                 map_version=None,
                  skip=True,
                  **kwargs,
                  ):
@@ -76,11 +95,21 @@ class HierarchicalDataset(BaseDataset):
         assert isinstance(file_type, (list, tuple))
         assert isinstance(kwargs.get('ann_file', None), (list, tuple))
         assert len(file_type) == len(kwargs.get('ann_file', []))
-        self.version_map = None
+        self.attr_map_to_ind = None
+        self.attr_version_map = None
+        self.ignore_map = None
+        self.ignore_inds = None
         self.skip = skip
         if version is not None:
-            assert version in version_map, f'Support version are {list(version_map.keys())}'
-            self.version_map = version_map[version]
+            assert version in attr_map_to_ind, f'Support version are {list(attr_map_to_ind.keys())}'
+            self.attr_map_to_ind = attr_map_to_ind[version]
+            if map_version is not None:
+                assert map_version in version_map
+                self.attr_version_map = version_map[map_version]
+                self.ignore_map = ignore_map[map_version]
+                version1, version2 = map_version.strip().split(' ')
+                self.ignore_inds = generate_ignore_inds(version1, version2, map_version)
+
         self.eval_by_class = eval_by_class
         self.fpr = fpr
         self.tpr_at_fpr = tpr_at_fpr
@@ -119,13 +148,16 @@ class HierarchicalDataset(BaseDataset):
                         max_len = file_type['max_len']
                         label = np.zeros(max_len)
                         if len(line) != 1:
-                            if self.version_map is not None:
+                            if self.attr_map_to_ind is not None:
                                 new_line = []
                                 for idx2 in range(len(line[1:])):
-                                    if self.skip and line[idx2 + 1].strip() not in self.version_map:
+                                    current_key = line[idx2 + 1].strip()
+                                    if self.attr_version_map is not None and current_key in self.attr_version_map:
+                                        current_key = self.attr_version_map[current_key]
+                                    if self.skip and current_key not in self.attr_map_to_ind:
                                         continue
                                     try:
-                                        numerical_attr = self.version_map[line[idx2 + 1].strip()]
+                                        numerical_attr = self.attr_map_to_ind[line[idx2 + 1].strip()]
                                     except Exception as e:
                                         print(e.args)
                                         print(str(e))
@@ -137,6 +169,9 @@ class HierarchicalDataset(BaseDataset):
                             pos_inds = [pind for pind in pos_inds if pind < max_len]
                             if pos_inds:
                                 label[pos_inds] = 1
+                            if self.ignore_inds is not None:
+                                # set ignore flag if the attr exists in version1 but not exists in version2
+                                label[self.ignore_inds] = -1
                         label = label.tolist()
                     else:
                         raise ValueError(f"Only support 'ce' and 'bce' file_type")
@@ -303,8 +338,8 @@ class HierarchicalDataset(BaseDataset):
 
         if 'mAP' in metrics:
             classes = None
-            if self.version_map is not None:
-                classes = list(self.version_map.keys())
+            if self.attr_map_to_ind is not None:
+                classes = list(self.attr_map_to_ind.keys())
             mAP_value = mAP(results, gt_labels, classes)
             eval_results['mAP'] = mAP_value
         if len(set(metrics) - {'mAP'}) != 0:

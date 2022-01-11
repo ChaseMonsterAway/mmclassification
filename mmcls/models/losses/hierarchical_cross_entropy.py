@@ -1,15 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import pdb
 from functools import partial
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..builder import LOSSES
-from .utils import weight_reduce_loss
 from .focal_loss import sigmoid_focal_loss
+from .utils import weight_reduce_loss
+from ..builder import LOSSES
 
 
 def cross_entropy(pred,
@@ -209,10 +207,11 @@ class HierarchicalCrossEntropyLoss(nn.Module):
                       class_weight,
                       reduction,
                       avg_factor,
+                      masks,
                       **kwargs
                       ):
         assert max(self.split) == cls_score.size(-1)
-        mask = self._generate_mask(label, cls_score) if self.fix_mask else None
+        mask = self._generate_mask(label, cls_score) if self.fix_mask else masks
         loss_cls = []
         for idx, end in enumerate(self.split):
             start = 0 if idx == 0 else self.split[idx - 1]
@@ -237,6 +236,7 @@ class HierarchicalCrossEntropyLoss(nn.Module):
                 weight=None,
                 avg_factor=None,
                 reduction_override=None,
+                masks=None,
                 **kwargs):
         # pdb.set_trace()
         assert reduction_override in (None, 'none', 'mean', 'sum')
@@ -255,6 +255,7 @@ class HierarchicalCrossEntropyLoss(nn.Module):
             class_weight=class_weight,
             reduction=reduction,
             avg_factor=avg_factor,
+            masks=masks,
             **kwargs)
         # pdb.set_trace()
         return loss_cls
