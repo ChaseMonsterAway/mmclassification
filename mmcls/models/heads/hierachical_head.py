@@ -83,6 +83,22 @@ class HiearachicalLinearClsHead(ClsHead):
         mask[gt_label == -1] = 0
         return mask
 
+    def loss(self, cls_score, gt_label, masks):
+        num_samples = len(cls_score)
+        losses = dict()
+        # compute loss
+        loss = self.compute_loss(cls_score, gt_label, avg_factor=num_samples, masks=masks)
+        if self.cal_acc:
+            # compute accuracy
+            acc = self.compute_accuracy(cls_score, gt_label)
+            assert len(acc) == len(self.topk)
+            losses['accuracy'] = {
+                f'top-{k}': a
+                for k, a in zip(self.topk, acc)
+            }
+        losses['loss'] = loss
+        return losses
+
     def forward_train(self, x, gt_label):
         if isinstance(x, tuple):
             x = x[-1]
